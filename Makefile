@@ -11,7 +11,7 @@ $(TARGETS)/socksproxy: main.go
 	@go build -o $(TARGETS)/socksproxy main.go
 
 run-socksproxy: socksproxy
-	$(TARGETS)/socksproxy > $(TARGETS)/socksproxy.log
+	$(TARGETS)/socksproxy &> $(TARGETS)/socksproxy.log
 
 run-socksproxy-quiet: socksproxy
 	$(TARGETS)/socksproxy &> $(TARGETS)/socksproxy.log &
