@@ -59,6 +59,7 @@ func main() {
 	allowedFQDNs := []string{
 		"acme-v02.api.letsencrypt.org",
 		"acme-staging-v02.api.letsencrypt.org",
+		"asdf.com",
 	}
 
 	flag.StringVar(&addr, "addr", ":1080", "Address to listen on.")
