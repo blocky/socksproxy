@@ -51,26 +51,27 @@ func (m myRule) Allow(ctx context.Context, req *socks5.Request) (context.Context
 
 func main() {
 	var addr string
-	// allowedAddrs represents the list of IP addresses that the SOCKS server
-	// allows connections to.  The list contains our Kafka cluster.
-	allowedAddrs := []net.IP{}
-	// allowedFQDNs represents the list of FQDNs that the SOCKS server allows
-	// connections to.  The list contains Let's Encrypt's domain names.
-	allowedFQDNs := []string{
-		"acme-v02.api.letsencrypt.org",
-		"acme-staging-v02.api.letsencrypt.org",
-		"asdf.com",
-	}
+	//// allowedAddrs represents the list of IP addresses that the SOCKS server
+	//// allows connections to.  The list contains our Kafka cluster.
+	//allowedAddrs := []net.IP{}
+	//// allowedFQDNs represents the list of FQDNs that the SOCKS server allows
+	//// connections to.  The list contains Let's Encrypt's domain names.
+	//allowedFQDNs := []string{
+	//	"acme-v02.api.letsencrypt.org",
+	//	"acme-staging-v02.api.letsencrypt.org",
+	//	"asdf.com",
+	//}
 
 	flag.StringVar(&addr, "addr", ":1080", "Address to listen on.")
 	flag.Parse()
 	log.Printf("Starting SOCKSv5 server on %s.", addr)
 
 	conf := &socks5.Config{
-		Rules: myRule{
-			addrs: allowedAddrs,
-			fqdns: allowedFQDNs,
-		},
+		//Rules: myRule{
+		//	addrs: allowedAddrs,
+		//	fqdns: allowedFQDNs,
+		//},
+		Rules: socks5.PermitAll(),
 	}
 	server, err := socks5.New(conf)
 	if err != nil {
