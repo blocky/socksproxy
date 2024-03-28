@@ -6,7 +6,7 @@ a program running in a Nitro Server.
 
 The current iteration, however, is coded to either just allow connections to
 [Let's Encrypt](https://letsencrypt.org/) for the purpose of getting
-self-signed certificates, or it allows all connections.
+self-signed certificates, or it allows all outgoing HTTP connections.
 
 ## Usage
 
