@@ -18,7 +18,10 @@ const (
 
 type allowLetsEncrypt struct{}
 
-func (m allowLetsEncrypt) Allow(ctx context.Context, req *socks5.Request) (context.Context, bool) {
+func (m allowLetsEncrypt) Allow(
+	ctx context.Context,
+	req *socks5.Request,
+) (context.Context, bool) {
 	for _, fqdn := range []string{letsEncryptProd, letsEncryptStaging} {
 		if req.DestAddr.FQDN == fqdn {
 			return ctx, allowed
@@ -31,7 +34,10 @@ type logAll struct {
 	rules socks5.RuleSet
 }
 
-func (m logAll) Allow(ctx context.Context, req *socks5.Request) (context.Context, bool) {
+func (m logAll) Allow(
+	ctx context.Context,
+	req *socks5.Request,
+) (context.Context, bool) {
 	ctx, allowed := m.rules.Allow(ctx, req)
 
 	prefix := "Denying"
