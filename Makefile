@@ -16,5 +16,9 @@ run-socksproxy: socksproxy
 run-socksproxy-quiet: socksproxy
 	$(TARGETS)/socksproxy &> $(TARGETS)/socksproxy.log &
 
+test:
+	@echo "Test socksproxy..."
+	@go test -count=1 ./...
+
 clean:
 	rm -rf $(TARGETS)

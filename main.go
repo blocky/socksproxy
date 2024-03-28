@@ -3,81 +3,104 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
-	"net"
 
 	"github.com/armon/go-socks5"
 )
 
 const (
-	allowed = true
-	denied  = false
+	allowed            = true
+	denied             = false
+	letsEncryptProd    = "acme-v02.api.letsencrypt.org"
+	letsEncryptStaging = "acme-staging-v02.api.letsencrypt.org"
 )
 
-type myRule struct {
-	addrs []net.IP
-	fqdns []string
-}
+type allowLetsEncrypt struct{}
 
-func logConn(allowed bool, from, to *socks5.AddrSpec) {
-	var prefix string
-	if allowed {
-		prefix = "Allowing"
-	} else {
-		prefix = "Denying"
-	}
-	log.Printf("%s connection request from %s:%d (%s) to %s:%d (%s).",
-		prefix,
-		from.IP, from.Port, from.FQDN,
-		to.IP, to.Port, to.FQDN)
-}
-
-func (m myRule) Allow(ctx context.Context, req *socks5.Request) (context.Context, bool) {
-	for _, addr := range m.addrs {
-		if req.DestAddr.IP.Equal(addr) {
-			logConn(allowed, req.RemoteAddr, req.DestAddr)
-			return ctx, allowed
-		}
-	}
-	for _, fqdn := range m.fqdns {
+func (m allowLetsEncrypt) Allow(
+	ctx context.Context,
+	req *socks5.Request,
+) (context.Context, bool) {
+	for _, fqdn := range []string{letsEncryptProd, letsEncryptStaging} {
 		if req.DestAddr.FQDN == fqdn {
-			logConn(allowed, req.RemoteAddr, req.DestAddr)
 			return ctx, allowed
 		}
 	}
-	logConn(denied, req.RemoteAddr, req.DestAddr)
 	return ctx, denied
 }
 
-func main() {
-	var addr string
-	// allowedAddrs represents the list of IP addresses that the SOCKS server
-	// allows connections to.  The list contains our Kafka cluster.
-	allowedAddrs := []net.IP{}
-	// allowedFQDNs represents the list of FQDNs that the SOCKS server allows
-	// connections to.  The list contains Let's Encrypt's domain names.
-	allowedFQDNs := []string{
-		"acme-v02.api.letsencrypt.org",
-		"acme-staging-v02.api.letsencrypt.org",
-	}
+type logAll struct {
+	rules socks5.RuleSet
+}
 
-	flag.StringVar(&addr, "addr", ":1080", "Address to listen on.")
+func (m logAll) Allow(
+	ctx context.Context,
+	req *socks5.Request,
+) (context.Context, bool) {
+	ctx, allowed := m.rules.Allow(ctx, req)
+
+	prefix := "Denying"
+	if allowed {
+		prefix = "Allowing"
+	}
+	from := req.RemoteAddr
+	to := req.DestAddr
+	log.Printf("%s connection request from %s:%d (%s) to %s:%d (%s).",
+		prefix,
+		from.IP, from.Port, from.FQDN,
+		to.IP, to.Port, to.FQDN,
+	)
+
+	return ctx, allowed
+}
+
+type config struct {
+	addr         string
+	fqdnAllowAll bool
+	verbose      bool
+}
+
+func parseFlags() config {
+	c := config{}
+
+	flag.StringVar(&c.addr, "addr", ":1080", "Address to listen on.")
+	flag.BoolVar(&c.fqdnAllowAll, "fqdn-allow-all", false, "Allow all FQDNs")
+	flag.BoolVar(&c.verbose, "verbose", false, "log verbosely")
 	flag.Parse()
-	log.Printf("Starting SOCKSv5 server on %s.", addr)
 
-	conf := &socks5.Config{
-		Rules: myRule{
-			addrs: allowedAddrs,
-			fqdns: allowedFQDNs,
-		},
+	return c
+}
+
+func newServer(cfg config) (*socks5.Server, error) {
+	var rules socks5.RuleSet = allowLetsEncrypt{}
+	if cfg.fqdnAllowAll {
+		rules = socks5.PermitAll()
 	}
-	server, err := socks5.New(conf)
+
+	if cfg.verbose {
+		rules = logAll{rules}
+	}
+
+	socks5Cfg := &socks5.Config{Rules: rules}
+	server, err := socks5.New(socks5Cfg)
+	if err != nil {
+		return nil, fmt.Errorf("creating SOCKS5 server: %w", err)
+	}
+
+	return server, nil
+}
+
+func main() {
+	cfg := parseFlags()
+
+	server, err := newServer(cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	// Create SOCKS5 proxy.
-	if err := server.ListenAndServe("tcp", addr); err != nil {
+	log.Printf("Starting SOCKSv5 server on %s.", cfg.addr)
+	if err := server.ListenAndServe("tcp", cfg.addr); err != nil {
 		panic(err)
 	}
 }
