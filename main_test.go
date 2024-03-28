@@ -51,9 +51,10 @@ func TestStartServer(t *testing.T) {
 			tt.dst,
 		).Output()
 
-		if tt.success && err != nil {
+		switch {
+		case tt.success && err != nil:
 			t.Errorf("expected no error, got %v", err)
-		} else if !tt.success && err == nil {
+		case !tt.success && err == nil:
 			t.Errorf("expected error, got no error")
 		}
 
