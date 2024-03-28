@@ -82,8 +82,8 @@ func newServer(cfg config) (*socks5.Server, error) {
 		rules = logAll{rules}
 	}
 
-	conf := &socks5.Config{Rules: rules}
-	server, err := socks5.New(conf)
+	socks5Cfg := &socks5.Config{Rules: rules}
+	server, err := socks5.New(socks5Cfg)
 	if err != nil {
 		return nil, fmt.Errorf("creating proxy server: %w", err)
 	}
